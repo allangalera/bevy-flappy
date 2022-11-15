@@ -1,0 +1,16 @@
+[package]
+name = "bevy-flappy"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = "0.8.1"
+bevy-parallax = "0.2.0"
+bevy_rapier2d = "0.16.2"
+noise = "0.8.1"
+rand = "0.8.5"
+
+[profile.dev.package."*"]
+opt-level = 3
