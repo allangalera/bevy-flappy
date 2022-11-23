@@ -31,13 +31,14 @@ impl Plugin for PipesPlugin {
     }
 }
 
-#[derive(Component)]
+#[derive(Resource)]
 struct PipesSpawnConfig {
     timer: Timer,
 }
 
 #[derive(Component)]
 pub struct PipeTop;
+
 #[derive(Component)]
 pub struct PipeBottom;
 
@@ -54,7 +55,7 @@ struct PipeDespawnArea;
 
 fn setup_spawn_pipe(mut commands: Commands) {
     commands.insert_resource(PipesSpawnConfig {
-        timer: Timer::new(Duration::from_secs(5), true),
+        timer: Timer::new(Duration::from_secs(5), TimerMode::Repeating),
     });
 }
 
@@ -98,8 +99,6 @@ fn spawn_pipe(
         let initial_position_x = window.width() + PIPE_WIDTH;
         let initial_height_variation = window.height() - GAP_SIZE / 2.0 - 20.0;
         let initial_position_y = rng.gen_range(-initial_height_variation..initial_height_variation);
-
-        let pipe_color = Color::rgb(0.0, 1.0, 0.0);
 
         commands
             .spawn_bundle(SpriteBundle {

@@ -55,7 +55,7 @@ fn spawn_flappy(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Flappy);
 }
 
-fn animate_flappy(time: Res<Time>, mut q_flappy: Query<(&Velocity, &mut Transform), With<Flappy>>) {
+fn animate_flappy(mut q_flappy: Query<(&Velocity, &mut Transform), With<Flappy>>) {
     for (velocity, mut transform) in q_flappy.iter_mut() {
         if velocity.linvel[1] > 0.0 {
             transform.rotation = transform
@@ -122,7 +122,7 @@ fn detect_flappy_gap_sensor_collision(
                 if let (Ok(_value), Ok(_value2)) =
                     (query_flappy.get(*entity1), query_gap_sensor.get(*entity2))
                 {
-                    let (entity, mut sensor) = query_gap_sensor.get_mut(*entity2).unwrap();
+                    let (_entity, mut sensor) = query_gap_sensor.get_mut(*entity2).unwrap();
                     if !sensor.counted {
                         sensor.counted = true;
                         score.value += 1;
@@ -132,7 +132,7 @@ fn detect_flappy_gap_sensor_collision(
                 if let (Ok(_value), Ok(_value2)) =
                     (query_flappy.get(*entity2), query_gap_sensor.get(*entity1))
                 {
-                    let (entity, mut sensor) = query_gap_sensor.get_mut(*entity1).unwrap();
+                    let (_entity, mut sensor) = query_gap_sensor.get_mut(*entity1).unwrap();
                     if !sensor.counted {
                         sensor.counted = true;
                         score.value += 1;

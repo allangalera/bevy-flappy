@@ -1,4 +1,5 @@
-use bevy::{prelude::*, render::texture::ImageSettings};
+use bevy::prelude::*;
+use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 
 mod background;
@@ -22,20 +23,26 @@ pub enum AppState {
 
 fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            title: "Floppy Allan".to_string(),
-            width: 1200.0,
-            height: 600.0,
-            ..Default::default()
-        })
         .insert_resource(ClearColor(Color::rgb(
             208.0 / 255.0,
             244.0 / 255.0,
             247.0 / 255.0,
         )))
-        .insert_resource(ImageSettings::default_nearest())
         .add_state(AppState::GameStart)
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    window: WindowDescriptor {
+                        title: "Flappy Bevy".to_string(),
+                        width: 1200.0,
+                        height: 600.0,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        )
+        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(BackgroundPlugin)
@@ -48,7 +55,7 @@ fn main() {
         .run();
 }
 
-#[derive(Component)]
+#[derive(Resource)]
 pub struct Score {
     value: u32,
 }

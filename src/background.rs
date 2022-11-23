@@ -9,22 +9,29 @@ pub struct BackgroundPlugin;
 
 impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn)
+        app.add_startup_system(spawn_despawn_area)
+            .add_startup_system(spawn)
             .add_startup_system(setup_cloud_spawn_timer)
+            .add_system(detect_and_despawn)
             .add_system(cloud_spawner);
     }
 }
 
-#[derive(Component)]
+#[derive(Resource)]
 struct CloudsSpawnConfig {
     timer: Timer,
 }
+#[derive(Component)]
+struct Scenario;
 
 #[derive(Component)]
 struct Background;
 
 #[derive(Component)]
 struct Cloud;
+
+#[derive(Component)]
+struct DespawnArea;
 
 fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Windows>) {
     let window = windows.primary();
@@ -39,13 +46,16 @@ fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Wi
             ..default()
         })
         .insert(RigidBody::KinematicVelocityBased)
+        .insert(Collider::cuboid(512.0, 400.0))
         .insert(Velocity::linear(Vec2::new(LAYER_1_SPEED, 0.0)))
-        .insert(Background);
+        .insert(Background)
+        .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(Scenario);
 }
 
 fn setup_cloud_spawn_timer(mut commands: Commands) {
     commands.insert_resource(CloudsSpawnConfig {
-        timer: Timer::new(Duration::from_secs(2), true),
+        timer: Timer::new(Duration::from_secs(2), TimerMode::Repeating),
     });
 }
 
@@ -96,14 +106,51 @@ fn cloud_spawner(
                     ..default()
                 })
                 .insert(RigidBody::KinematicVelocityBased)
+                .insert(Collider::cuboid(250.0, 250.0))
                 .insert(Velocity::linear(Vec2::new(speed, 0.0)))
-                .insert(Cloud);
+                .insert(Cloud)
+                .insert(ActiveEvents::COLLISION_EVENTS)
+                .insert(Scenario);
         }
     }
 }
 
-// fn animate(time: Res<Time>, mut query: Query<&mut Transform, With<Background>>) {
-//     for (mut transform) in query.iter_mut() {
-//         transform.translation.x = transform.translation.x + LAYER_1_SPEED * time.delta_seconds();
-//     }
-// }
+fn spawn_despawn_area(mut commands: Commands, windows: Res<Windows>) {
+    let window = windows.primary();
+    let x_position = -(4.0 * window.width());
+    // let x_position = -window.width() - 200.0;
+    let width = 50.0;
+    let height = window.height() * 2.0;
+
+    commands
+        .spawn_bundle(SpriteBundle {
+            transform: Transform::from_xyz(x_position, 0.0, 0.0),
+            sprite: Sprite {
+                color: Color::rgb(1.0, 0.0, 0.0),
+                custom_size: Some(Vec2::new(50.0, height)),
+                ..default()
+            },
+            ..default()
+        })
+        .insert(Collider::cuboid(width / 2.0, height / 2.0))
+        .insert(Sensor)
+        .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(DespawnArea);
+}
+fn detect_and_despawn(
+    rapier_context: Res<RapierContext>,
+    query_despawn_area: Query<Entity, With<DespawnArea>>,
+    query_scenario: Query<Entity, With<Scenario>>,
+    mut commands: Commands,
+) {
+    for entity_despawn_area in query_despawn_area.iter() {
+        for entity_scenario in query_scenario.iter() {
+            if let Some(_value) =
+                rapier_context.intersection_pair(entity_despawn_area, entity_scenario)
+            {
+                println!("despawning something");
+                commands.entity(entity_scenario).despawn_recursive();
+            }
+        }
+    }
+}
