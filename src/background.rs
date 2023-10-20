@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
 use std::time::Duration;
@@ -9,11 +9,11 @@ pub struct BackgroundPlugin;
 
 impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_despawn_area)
-            .add_startup_system(spawn)
-            .add_startup_system(setup_cloud_spawn_timer)
-            .add_system(detect_and_despawn)
-            .add_system(cloud_spawner);
+        app.add_systems(
+            Startup,
+            (spawn_despawn_area, spawn, setup_cloud_spawn_timer),
+        )
+        .add_systems(Update, (detect_and_despawn, cloud_spawner));
     }
 }
 
@@ -33,10 +33,16 @@ struct Cloud;
 #[derive(Component)]
 struct DespawnArea;
 
-fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, windows: Res<Windows>) {
-    let window = windows.primary();
+fn spawn(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let Ok(window) = window_query.get_single() else {
+        return;
+    };
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             texture: asset_server.load("mountains.png"),
             transform: Transform {
                 translation: Vec3::new(0.0, -(window.width() / 2.0 - 100.0), 0.0),
@@ -61,7 +67,7 @@ fn setup_cloud_spawn_timer(mut commands: Commands) {
 
 fn cloud_spawner(
     mut commands: Commands,
-    windows: Res<Windows>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut config: ResMut<CloudsSpawnConfig>,
     asset_server: Res<AssetServer>,
@@ -69,9 +75,11 @@ fn cloud_spawner(
     config.timer.tick(time.delta());
 
     if config.timer.finished() {
+        let Ok(window) = window_query.get_single() else {
+            return;
+        };
         let mut rng = rand::thread_rng();
         if rng.gen_bool(0.5) {
-            let window = windows.primary();
             let initial_height_variation = window.height() - window.height() * 0.1;
             let initial_position_y =
                 rng.gen_range(-initial_height_variation..initial_height_variation);
@@ -92,7 +100,7 @@ fn cloud_spawner(
             };
 
             commands
-                .spawn_bundle(SpriteBundle {
+                .spawn(SpriteBundle {
                     texture: asset_server.load(image_path),
                     transform: Transform {
                         translation: Vec3::new(initial_position_x, initial_position_y, 0.0),
@@ -115,15 +123,17 @@ fn cloud_spawner(
     }
 }
 
-fn spawn_despawn_area(mut commands: Commands, windows: Res<Windows>) {
-    let window = windows.primary();
+fn spawn_despawn_area(mut commands: Commands, window_query: Query<&Window, With<PrimaryWindow>>) {
+    let Ok(window) = window_query.get_single() else {
+        return;
+    };
     let x_position = -(4.0 * window.width());
     // let x_position = -window.width() - 200.0;
     let width = 50.0;
     let height = window.height() * 2.0;
 
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform::from_xyz(x_position, 0.0, 0.0),
             sprite: Sprite {
                 color: Color::rgb(1.0, 0.0, 0.0),

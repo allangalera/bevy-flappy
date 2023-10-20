@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
 use std::time::Duration;
@@ -17,17 +18,16 @@ pub struct PipesPlugin;
 
 impl Plugin for PipesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
-            SystemSet::on_enter(AppState::InGame).with_system(spawn_pipe_despawn_area),
+        app.add_systems(
+            OnEnter(AppState::InGame),
+            (spawn_pipe_despawn_area, setup_spawn_pipe),
         )
-        // spawn first pipe right away
-        .add_system_set(SystemSet::on_enter(AppState::InGame).with_system(setup_spawn_pipe))
-        .add_system_set(SystemSet::on_update(AppState::InGame).with_system(spawn_pipe))
-        .add_system_set(
-            SystemSet::on_update(AppState::InGame)
-                .with_system(detect_pipe_despawn_and_pipes_collision),
+        .add_systems(
+            Update,
+            (spawn_pipe, detect_pipe_despawn_and_pipes_collision)
+                .run_if(in_state(AppState::InGame)),
         )
-        .add_system_set(SystemSet::on_exit(AppState::InGame).with_system(despawn));
+        .add_systems(OnExit(AppState::InGame), despawn);
     }
 }
 
@@ -59,14 +59,19 @@ fn setup_spawn_pipe(mut commands: Commands) {
     });
 }
 
-fn spawn_pipe_despawn_area(mut commands: Commands, windows: Res<Windows>) {
-    let window = windows.primary();
+fn spawn_pipe_despawn_area(
+    mut commands: Commands,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let Ok(window) = window_query.get_single() else {
+        return;
+    };
     let x_position = -(window.width() + PIPE_WIDTH + 20.0);
     let width = 50.0;
     let height = window.height() * 2.0;
 
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             transform: Transform::from_xyz(x_position, 0.0, 0.0),
             sprite: Sprite {
                 color: Color::rgb(1.0, 0.0, 0.0),
@@ -83,7 +88,7 @@ fn spawn_pipe_despawn_area(mut commands: Commands, windows: Res<Windows>) {
 
 fn spawn_pipe(
     mut commands: Commands,
-    windows: Res<Windows>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
     time: Res<Time>,
     mut config: ResMut<PipesSpawnConfig>,
     asset_server: Res<AssetServer>,
@@ -92,7 +97,9 @@ fn spawn_pipe(
 
     if config.timer.finished() {
         let mut rng = rand::thread_rng();
-        let window = windows.primary();
+        let Ok(window) = window_query.get_single() else {
+            return;
+        };
 
         let sensor_width = 50.0;
 
@@ -101,7 +108,7 @@ fn spawn_pipe(
         let initial_position_y = rng.gen_range(-initial_height_variation..initial_height_variation);
 
         commands
-            .spawn_bundle(SpriteBundle {
+            .spawn(SpriteBundle {
                 transform: Transform::from_xyz(initial_position_x, initial_position_y, 1.0),
                 sprite: Sprite {
                     color: Color::NONE.into(),
@@ -116,7 +123,7 @@ fn spawn_pipe(
             .with_children(|parent| {
                 // pipe top
                 parent
-                    .spawn_bundle(SpriteBundle {
+                    .spawn(SpriteBundle {
                         transform: Transform::from_xyz(
                             0.0,
                             PIPE_HEIGHT / 2.0 + GAP_SIZE / 2.0,
@@ -131,7 +138,7 @@ fn spawn_pipe(
                         let number_of_sprites = (PIPE_HEIGHT / SPRITE_SIZE) as u32;
                         let initial_position = -(PIPE_HEIGHT / 2.0 - SPRITE_SIZE / 2.0);
                         for pipe_index in 0..number_of_sprites {
-                            parent.spawn_bundle(SpriteBundle {
+                            parent.spawn(SpriteBundle {
                                 transform: Transform::from_xyz(
                                     0.0,
                                     initial_position + (pipe_index as f32 * SPRITE_SIZE),
@@ -149,7 +156,7 @@ fn spawn_pipe(
                     });
                 // Gap Sensor
                 parent
-                    .spawn_bundle(SpriteBundle {
+                    .spawn(SpriteBundle {
                         transform: Transform::from_xyz(0.0, 0.0, 0.0),
                         sprite: Sprite {
                             color: Color::NONE.into(),
@@ -164,7 +171,7 @@ fn spawn_pipe(
                     .insert(GapSensor { counted: false });
                 // pipe bottom
                 parent
-                    .spawn_bundle(SpriteBundle {
+                    .spawn(SpriteBundle {
                         transform: Transform::from_xyz(
                             0.0,
                             -(PIPE_HEIGHT / 2.0 + GAP_SIZE / 2.0),
@@ -179,7 +186,7 @@ fn spawn_pipe(
                         let number_of_sprites = (PIPE_HEIGHT / SPRITE_SIZE) as u32;
                         let initial_position = -(PIPE_HEIGHT / 2.0 - SPRITE_SIZE / 2.0);
                         for pipe_index in 0..number_of_sprites {
-                            parent.spawn_bundle(SpriteBundle {
+                            parent.spawn(SpriteBundle {
                                 transform: Transform::from_xyz(
                                     0.0,
                                     initial_position + (pipe_index as f32 * SPRITE_SIZE),
@@ -223,7 +230,7 @@ fn despawn(
     query: Query<Entity, Or<(With<PipeGroup>, With<PipeDespawnArea>)>>,
     mut score: ResMut<Score>,
 ) {
-    score.value = 0;
+    score.0 = 0;
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }

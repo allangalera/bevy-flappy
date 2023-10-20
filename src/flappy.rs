@@ -12,17 +12,18 @@ pub struct FlappyPlugin;
 
 impl Plugin for FlappyPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(AppState::InGame).with_system(spawn_flappy))
-            .add_system_set(SystemSet::on_update(AppState::InGame).with_system(in_game_control))
-            .add_system_set(SystemSet::on_update(AppState::InGame).with_system(animate_flappy))
-            .add_system_set(
-                SystemSet::on_update(AppState::InGame)
-                    .with_system(detect_flappy_gap_sensor_collision),
+        app.add_systems(OnEnter(AppState::InGame), spawn_flappy)
+            .add_systems(
+                Update,
+                (
+                    in_game_control,
+                    animate_flappy,
+                    detect_flappy_gap_sensor_collision,
+                    detect_flappy_pipes_collision,
+                )
+                    .run_if(in_state(AppState::InGame)),
             )
-            .add_system_set(
-                SystemSet::on_update(AppState::InGame).with_system(detect_flappy_pipes_collision),
-            )
-            .add_system_set(SystemSet::on_exit(AppState::InGame).with_system(despawn_flappy));
+            .add_systems(OnExit(AppState::InGame), despawn_flappy);
     }
 }
 
@@ -34,7 +35,7 @@ fn spawn_flappy(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // flappy
     commands
-        .spawn_bundle(SpriteBundle {
+        .spawn(SpriteBundle {
             texture: asset_server.load("bevy.png"),
             sprite: Sprite {
                 color: Color::rgb(0.0, 0.0, 0.0),
@@ -76,7 +77,7 @@ fn despawn_flappy(mut commands: Commands, query: Query<Entity, With<Flappy>>) {
 }
 
 fn in_game_control(
-    mut app_state: ResMut<State<AppState>>,
+    mut app_state: ResMut<NextState<AppState>>,
     mut flappy: Query<(&mut Velocity, &mut ExternalImpulse, &mut Transform), With<Flappy>>,
     buttons: Res<Input<MouseButton>>,
     key_buttons: Res<Input<KeyCode>>,
@@ -91,12 +92,12 @@ fn in_game_control(
     }
     if key_buttons.just_pressed(KeyCode::Escape) {
         println!("Escape and go to main menu again");
-        app_state.set(AppState::GameStart).unwrap();
+        app_state.set(AppState::GameStart);
     }
 }
 
 fn detect_flappy_pipes_collision(
-    mut app_state: ResMut<State<AppState>>,
+    mut app_state: ResMut<NextState<AppState>>,
     rapier_context: Res<RapierContext>,
     query_flappy: Query<Entity, With<Flappy>>,
     query_pipe: Query<Entity, Or<(With<PipeTop>, With<PipeBottom>)>>,
@@ -104,7 +105,7 @@ fn detect_flappy_pipes_collision(
     for entity_flappy in query_flappy.iter() {
         for entity_pipe in query_pipe.iter() {
             if let Some(_value) = rapier_context.contact_pair(entity_flappy, entity_pipe) {
-                app_state.set(AppState::GameStart).unwrap();
+                app_state.set(AppState::GameStart);
             }
         }
     }
@@ -125,7 +126,7 @@ fn detect_flappy_gap_sensor_collision(
                     let (_entity, mut sensor) = query_gap_sensor.get_mut(*entity2).unwrap();
                     if !sensor.counted {
                         sensor.counted = true;
-                        score.value += 1;
+                        score.0 += 1;
                     }
                 }
 
@@ -135,7 +136,7 @@ fn detect_flappy_gap_sensor_collision(
                     let (_entity, mut sensor) = query_gap_sensor.get_mut(*entity1).unwrap();
                     if !sensor.counted {
                         sensor.counted = true;
-                        score.value += 1;
+                        score.0 += 1;
                     }
                 }
             }
