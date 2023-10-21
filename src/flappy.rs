@@ -48,6 +48,10 @@ fn spawn_flappy(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Velocity::zero())
         .insert(ActiveEvents::COLLISION_EVENTS)
         .insert(Collider::cuboid(sprite_size / 2.0, sprite_size / 2.0))
+        .insert(CollisionGroups::new(
+            Group::from_bits(0b0100).unwrap(),
+            Group::from_bits(0b0100).unwrap(),
+        ))
         .insert(ExternalImpulse {
             impulse: Vec2::new(0.0, 0.0),
             torque_impulse: 0.0,

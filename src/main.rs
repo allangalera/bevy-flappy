@@ -2,13 +2,13 @@ use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 
-// mod background;
+mod background;
 mod flappy;
 mod in_game_ui;
 mod main_menu;
 mod pipes;
 
-// use background::BackgroundPlugin;
+use background::BackgroundPlugin;
 use flappy::FlappyPlugin;
 use in_game_ui::InGameUiPlugin;
 use main_menu::MainMenuPlugin;
@@ -42,10 +42,10 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
-        .add_plugins(RapierDebugRenderPlugin::default())
-        // .add_plugins(BackgroundPlugin)
+        // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(BackgroundPlugin)
         .add_plugins(MainMenuPlugin)
         .add_plugins(InGameUiPlugin)
         .add_plugins(FlappyPlugin)

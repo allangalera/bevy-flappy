@@ -81,6 +81,10 @@ fn spawn_pipe_despawn_area(
             ..default()
         })
         .insert(Collider::cuboid(width / 2.0, height / 2.0))
+        .insert(CollisionGroups::new(
+            Group::from_bits(0b0010).unwrap(),
+            Group::from_bits(0b0010).unwrap(),
+        ))
         .insert(Sensor)
         .insert(ActiveEvents::COLLISION_EVENTS)
         .insert(PipeDespawnArea);
@@ -132,6 +136,10 @@ fn spawn_pipe(
                         ..default()
                     })
                     .insert(Collider::cuboid(PIPE_WIDTH / 2.0, PIPE_HEIGHT / 2.0))
+                    .insert(CollisionGroups::new(
+                        Group::from_bits(0b0110).unwrap(),
+                        Group::from_bits(0b0110).unwrap(),
+                    ))
                     .insert(ActiveEvents::COLLISION_EVENTS)
                     .insert(PipeTop)
                     .with_children(|parent| {
@@ -166,6 +174,10 @@ fn spawn_pipe(
                         ..default()
                     })
                     .insert(Collider::cuboid(sensor_width / 2.0, GAP_SIZE / 2.0))
+                    .insert(CollisionGroups::new(
+                        Group::from_bits(0b0110).unwrap(),
+                        Group::from_bits(0b0110).unwrap(),
+                    ))
                     .insert(ActiveEvents::COLLISION_EVENTS)
                     .insert(Sensor)
                     .insert(GapSensor { counted: false });
@@ -180,6 +192,10 @@ fn spawn_pipe(
                         ..default()
                     })
                     .insert(Collider::cuboid(PIPE_WIDTH / 2.0, PIPE_HEIGHT / 2.0))
+                    .insert(CollisionGroups::new(
+                        Group::from_bits(0b0110).unwrap(),
+                        Group::from_bits(0b0110).unwrap(),
+                    ))
                     .insert(ActiveEvents::COLLISION_EVENTS)
                     .insert(PipeBottom)
                     .with_children(|parent| {

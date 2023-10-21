@@ -5,6 +5,15 @@ use std::time::Duration;
 
 const LAYER_1_SPEED: f32 = -50.0;
 
+const CLOUD_SPEED_MIN: f32 = -500.0;
+const CLOUD_SPEED_MAX: f32 = -50.0;
+
+const CLOUD_SCALE_MIN: f32 = 0.25;
+const CLOUD_SCALE_MAX: f32 = 2.0;
+
+const CLOUD_DISTANCE_MIN: f32 = 0.0;
+const CLOUD_DISTANCE_MAX: f32 = 1.0;
+
 pub struct BackgroundPlugin;
 
 impl Plugin for BackgroundPlugin {
@@ -41,6 +50,7 @@ fn spawn(
     let Ok(window) = window_query.get_single() else {
         return;
     };
+
     commands
         .spawn(SpriteBundle {
             texture: asset_server.load("mountains.png"),
@@ -53,6 +63,10 @@ fn spawn(
         })
         .insert(RigidBody::KinematicVelocityBased)
         .insert(Collider::cuboid(512.0, 400.0))
+        .insert(CollisionGroups::new(
+            Group::from_bits(0b0001).unwrap(),
+            Group::from_bits(0b0001).unwrap(),
+        ))
         .insert(Velocity::linear(Vec2::new(LAYER_1_SPEED, 0.0)))
         .insert(Background)
         .insert(ActiveEvents::COLLISION_EVENTS)
@@ -63,6 +77,19 @@ fn setup_cloud_spawn_timer(mut commands: Commands) {
     commands.insert_resource(CloudsSpawnConfig {
         timer: Timer::new(Duration::from_secs(2), TimerMode::Repeating),
     });
+}
+
+fn translate_value_from_one_range_to_another(
+    current_value: f32,
+    current_range_min: f32,
+    current_range_max: f32,
+    new_range_min: f32,
+    new_range_max: f32,
+) -> f32 {
+    let current_range = current_range_max - current_range_min;
+    let new_range = new_range_max - new_range_min;
+
+    (((current_value - current_range_min) * new_range) / current_range) + new_range_min
 }
 
 fn cloud_spawner(
@@ -85,7 +112,23 @@ fn cloud_spawner(
                 rng.gen_range(-initial_height_variation..initial_height_variation);
             let initial_position_x = window.width() * 2.0;
 
-            let speed = rng.gen_range(-500.0..-50.0);
+            let speed = rng.gen_range(CLOUD_SPEED_MIN..CLOUD_SPEED_MAX);
+            let scale = translate_value_from_one_range_to_another(
+                speed,
+                CLOUD_SPEED_MIN,
+                CLOUD_SPEED_MAX,
+                CLOUD_SCALE_MIN,
+                CLOUD_SCALE_MAX,
+            );
+            let distance = CLOUD_DISTANCE_MAX
+                - translate_value_from_one_range_to_another(
+                    speed,
+                    CLOUD_SPEED_MIN,
+                    CLOUD_SPEED_MAX,
+                    CLOUD_DISTANCE_MIN,
+                    CLOUD_DISTANCE_MAX,
+                );
+            println!("speed: {}, scale: {}, distance: {}", speed, scale, distance);
 
             let image_path = match rng.gen_range(1..9) {
                 1 => "cloud1.png",
@@ -103,7 +146,8 @@ fn cloud_spawner(
                 .spawn(SpriteBundle {
                     texture: asset_server.load(image_path),
                     transform: Transform {
-                        translation: Vec3::new(initial_position_x, initial_position_y, 0.0),
+                        translation: Vec3::new(initial_position_x, initial_position_y, distance),
+                        scale: Vec3::new(scale, scale, 1.0),
                         ..default()
                     },
                     sprite: Sprite {
@@ -115,6 +159,10 @@ fn cloud_spawner(
                 })
                 .insert(RigidBody::KinematicVelocityBased)
                 .insert(Collider::cuboid(250.0, 250.0))
+                .insert(CollisionGroups::new(
+                    Group::from_bits(0b0001).unwrap(),
+                    Group::from_bits(0b0001).unwrap(),
+                ))
                 .insert(Velocity::linear(Vec2::new(speed, 0.0)))
                 .insert(Cloud)
                 .insert(ActiveEvents::COLLISION_EVENTS)
@@ -143,6 +191,10 @@ fn spawn_despawn_area(mut commands: Commands, window_query: Query<&Window, With<
             ..default()
         })
         .insert(Collider::cuboid(width / 2.0, height / 2.0))
+        .insert(CollisionGroups::new(
+            Group::from_bits(0b0001).unwrap(),
+            Group::from_bits(0b0001).unwrap(),
+        ))
         .insert(Sensor)
         .insert(ActiveEvents::COLLISION_EVENTS)
         .insert(DespawnArea);
