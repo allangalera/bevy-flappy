@@ -128,7 +128,6 @@ fn cloud_spawner(
                     CLOUD_DISTANCE_MIN,
                     CLOUD_DISTANCE_MAX,
                 );
-            println!("speed: {}, scale: {}, distance: {}", speed, scale, distance);
 
             let image_path = match rng.gen_range(1..9) {
                 1 => "cloud1.png",
@@ -210,7 +209,6 @@ fn detect_and_despawn(
             if let Some(_value) =
                 rapier_context.intersection_pair(entity_despawn_area, entity_scenario)
             {
-                println!("despawning something");
                 commands.entity(entity_scenario).despawn_recursive();
             }
         }

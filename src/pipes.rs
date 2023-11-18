@@ -14,6 +14,14 @@ const PIPE_WIDTH: f32 = SPRITE_SIZE;
 
 const GAP_SIZE: f32 = 600.0;
 
+const PIPE_BASE_SPEED: f32 = -300.0;
+const PIPE_SPEED_INCREASE_RATE: f32 = 0.05;
+
+const PIPE_SPAWN_FIRST: f32 = 1.0;
+const PIPE_SPAWN_INTERVAL_INITIAL: f32 = 5.0;
+const PIPE_SPAWN_INTERVAL_FINAL: f32 = 2.0;
+const PIPE_SPAWN_INTERVAL_INCREASE_RATE: f32 = 0.05;
+
 pub struct PipesPlugin;
 
 impl Plugin for PipesPlugin {
@@ -55,7 +63,10 @@ struct PipeDespawnArea;
 
 fn setup_spawn_pipe(mut commands: Commands) {
     commands.insert_resource(PipesSpawnConfig {
-        timer: Timer::new(Duration::from_secs(5), TimerMode::Repeating),
+        timer: Timer::new(
+            Duration::from_secs_f32(PIPE_SPAWN_FIRST),
+            TimerMode::Repeating,
+        ),
     });
 }
 
@@ -96,6 +107,7 @@ fn spawn_pipe(
     time: Res<Time>,
     mut config: ResMut<PipesSpawnConfig>,
     asset_server: Res<AssetServer>,
+    score: Res<Score>,
 ) {
     config.timer.tick(time.delta());
 
@@ -104,12 +116,23 @@ fn spawn_pipe(
         let Ok(window) = window_query.get_single() else {
             return;
         };
+        let new_timer_interval = f32::max(
+            PIPE_SPAWN_INTERVAL_INITIAL
+                * (1.0 - score.0 as f32 * PIPE_SPAWN_INTERVAL_INCREASE_RATE),
+            PIPE_SPAWN_INTERVAL_FINAL,
+        );
+        config.timer = Timer::new(
+            Duration::from_secs_f32(new_timer_interval),
+            TimerMode::Repeating,
+        );
 
         let sensor_width = 50.0;
 
         let initial_position_x = window.width() + PIPE_WIDTH;
         let initial_height_variation = window.height() - GAP_SIZE / 2.0 - 20.0;
         let initial_position_y = rng.gen_range(-initial_height_variation..initial_height_variation);
+
+        let pipe_speed = PIPE_BASE_SPEED * (1.0 + score.0 as f32 * PIPE_SPEED_INCREASE_RATE);
 
         commands
             .spawn(SpriteBundle {
@@ -121,7 +144,7 @@ fn spawn_pipe(
                 ..default()
             })
             .insert(RigidBody::KinematicVelocityBased)
-            .insert(Velocity::linear(Vec2::new(-300.0, 0.0)))
+            .insert(Velocity::linear(Vec2::new(pipe_speed, 0.0)))
             .insert(LockedAxes::ROTATION_LOCKED)
             .insert(PipeGroup)
             .with_children(|parent| {
